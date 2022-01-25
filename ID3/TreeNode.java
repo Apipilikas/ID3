@@ -1,4 +1,5 @@
-package ID3;
+//package ID3;
+
 public class TreeNode {
 
     private int value;
