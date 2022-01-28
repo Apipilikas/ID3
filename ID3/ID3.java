@@ -20,32 +20,41 @@ public class ID3 {
     rate > 5 -> 1
     rate < 5 -> 0
     */
+    private ReadFile readFile;
     private int numberOfFeatures;
     private int numberOfExamples;
     private String[] features;
     private char[][] examples;
-    private char[] usedFeatures;
+    private int[] usedFeatures;
+    private TreeNode root;
 
-    public ID3(String featureFileName, String dataFileName) {
-        ReadFile readFile = new ReadFile();
-        
+    public ID3() {
+        this.readFile = new ReadFile();
+    }
 
+    public void prepareData(String featureFileName, String dataFileName) {
         this.numberOfFeatures = readFile.getNumberOfLines(featureFileName);
         this.numberOfExamples = readFile.getNumberOfLines(dataFileName);
 
         this.features = readFile.extractFeatureData(featureFileName, this.numberOfFeatures);
         this.examples = readFile.extractData(dataFileName, this.numberOfFeatures, this.numberOfExamples);
+        
+        this.usedFeatures = new int[this.numberOfFeatures];
     }
 
     public double calculateEntropy(int[] numberOfRows) {
         double prob;
-        double entropy = 0.0f;
+        double entropy = 0.0d;
+        double subEntropy;
         
         for (int i = 0; i < 2; i++) {
-            prob = numberOfRows[i] / numberOfRows[2];
-            entropy += -prob * log2(prob);
+            prob = numberOfRows[i] / (double)numberOfRows[2];
+            subEntropy = -prob * log2(prob);
+            if (! Double.isNaN(subEntropy)) {
+                entropy += subEntropy;
+            }
         }
-        
+        System.out.println("Entropy is: " + entropy);
         return entropy;
     }
 
@@ -56,7 +65,7 @@ public class ID3 {
         int class1 = 0;
 
         for (int i = 0; i < examples.length; i++) {
-            if (examples[i][feature] == cls || cls == 'A') {
+            if (examples[i][feature] == cls || cls == 'T') {
                 if (examples[i][0] == '0') {
                     class0++;
                 }
@@ -65,6 +74,10 @@ public class ID3 {
         }
         class1 = nExamples - class0;
         int[] results = {class0, class1, nExamples};
+        System.out.println("Number of rows with class " + cls + 
+                           " has: class 0-> " + results[0] + 
+                           ", class 1-> " + results[1] + 
+                           ", sum-> " + results[2]);
         return results;
     }
 
@@ -72,20 +85,22 @@ public class ID3 {
         // datasetFeature = {entropy in dataset for class 0, entropy in dataset for class 1}
         double[] entropyFeature = new double[2];
         
-        int[] datasetFeatureClass0 = calculateNumberOfRowsWithClass(examples, feature + 1, '0');
+        System.out.println("Feature " + feature + " with class 0");
+        int[] datasetFeatureClass0 = calculateNumberOfRowsWithClass(examples, feature, '0');
         entropyFeature[0] = calculateEntropy(datasetFeatureClass0);
         
-        int[] datasetFeatureClass1 = calculateNumberOfRowsWithClass(examples, feature + 1, '1');
+        System.out.println("Feature " + feature + " with class 1");
+        int[] datasetFeatureClass1 = calculateNumberOfRowsWithClass(examples, feature, '1');
         entropyFeature[1] = calculateEntropy(datasetFeatureClass1);
 
         double prob;
         double informationGain = entropy;
 
         for (int i = 0; i < 2; i++) {
-            prob = dataset[i] / dataset[2];
+            prob = dataset[i] / (double)dataset[2];
             informationGain += -prob * entropyFeature[i];
         }
-        
+        System.out.println("IG for feature " + feature + " is: " + informationGain);
         return informationGain;
     }
 
@@ -95,23 +110,15 @@ public class ID3 {
 
     public void initializeTable() {
         for (int i = 0; i < this.usedFeatures.length; i++) {
-            this.usedFeatures[i] = '0';
+            this.usedFeatures[i] = i;
         }
-    }
-
-    public Boolean isFeatureUsed(int feature) {
-        return (this.usedFeatures[feature] == '1');
-    }
-
-    public void setFeatureUsed(int feature) {
-        this.usedFeatures[feature] = '1';
     }
 
     public int findMaxInformationGain(double[] informationGains) {
         int bestFeature = 0;
         double max = informationGains[0];
 
-        for (int feature = 1;feature < this.numberOfFeatures; feature++) {
+        for (int feature = 1; feature < informationGains.length; feature++) {
             if (max < informationGains[feature]) {
                 max = informationGains[feature];
                 bestFeature = feature;
@@ -121,10 +128,10 @@ public class ID3 {
     }
 
     public double[] getInformationGains(char[][] examples, int[] dataset) {
-        double[] informationGains = new double[this.numberOfFeatures];
+        double[] informationGains = new double[examples[0].length];
         double entropy = calculateEntropy(dataset);
         for (int feature = 1; feature < examples[0].length; feature++) {
-            informationGains[feature] = calculateInformationGain(examples, feature, dataset, entropy);
+            informationGains[feature - 1] = calculateInformationGain(examples, feature, dataset, entropy);
         }
         return informationGains;
     }
@@ -170,51 +177,115 @@ public class ID3 {
         return subFeatures;
     }
 
+    public void printExamples(char[][] examples) {
+        for (int i = 0; i < examples.length; i++) {
+            for (int j = 0; j < examples[i].length; j++) {
+                System.out.print(examples[i][j] + " ");
+            }
+            System.out.println("");
+        }
+    }
+
+    public void printFeatures(int[] features) {
+        for (int i = 0; i < features.length; i++) {
+            System.out.println("Feature index: " + i + ", Content: " + features[i]);
+            System.out.println("----------> " + this.features[features[i]] + " <----------");
+        }
+    }
+
+    public char mostCommonClass(int[] dataset) {
+        if (dataset[0] > dataset[1]) {
+            return '0';
+        }
+        return '1';
+    }
+
+    public void traverse(TreeNode treeNode) {
+        if (treeNode.isLeafNode()) {
+            System.out.println("Decision: " + treeNode.getLeafNodeClass());
+        }
+        else {
+            System.out.println(this.features[treeNode.getFeature()]);
+            
+            // left child traverse
+            System.out.println("Left child");
+            traverse(treeNode.getLeftChild());
+
+            // right child traverse
+            System.out.println("Right child");
+            traverse(treeNode.getRightChild());
+        }
+    }
+
     public void startID3() {
         // choose max infogain
-        TreeNode root;
-
-        
-        // root treenode = bestFeature
+        this.root = buildID3Tree(this.examples, this.usedFeatures);
     }
 
     public TreeNode buildID3Tree(char[][] subExamples, int[] subFeatures) {
         TreeNode currentTreeNode = new TreeNode();
-        int[] dataset = calculateNumberOfRowsWithClass(subExamples, 0, 'A');
+        printExamples(subExamples);
+        int[] dataset = calculateNumberOfRowsWithClass(subExamples, 0, 'T');
         if (isSameClass(dataset, '0')) {
             // leaf node with final result 0
             currentTreeNode.setAsLeafNode('0');
+            System.out.println("Setting leaf node with decision: 0");
         }
         else if (isSameClass(dataset, '1')) {
             // leaf node with final result 1
             currentTreeNode.setAsLeafNode('1');
+            System.out.println("Setting leaf node with decision: 1");
         }
         else if (subFeatures.length == 0) {
-
+            // leaf result with most common class
+            char decision = mostCommonClass(dataset);
+            currentTreeNode.setAsLeafNode(decision);
+            System.out.println("Setting leaf node with decision: " + decision);
         }
         else {
-            // find max = f1
-            double[] informationGains = getInformationGains(subExamples, dataset);
-            // without target value
-            int highestInfoGainFeature = findMaxInformationGain(informationGains);
+            int highestInfoGainFeature = 0;
+            if (subFeatures.length != 1) {
+                // find max = f1
+                double[] informationGains = getInformationGains(subExamples, dataset);
+                // without target value
+                highestInfoGainFeature = findMaxInformationGain(informationGains);
+            }
+
             currentTreeNode.setFeature(subFeatures[highestInfoGainFeature]);
+
+            System.out.println("Best feature is: " + this.features[subFeatures[highestInfoGainFeature]]);
             
             // TODO: remember to mark this feature as USED
-            int[] nSubFeatures = getSubFeatures(subFeatures, highestInfoGainFeature);
+            int[] newSubFeatures = getSubFeatures(subFeatures, highestInfoGainFeature);
 
             int nExamplesClass0 = calculateNumberOfRowsWithClass(subExamples, highestInfoGainFeature + 1, '0')[2];
-            char[][] subExamplesClass0 = getSubExamples(subExamples, nExamplesClass0, highestInfoGainFeature, '0');
+            char[][] subExamplesClass0 = getSubExamples(subExamples, nExamplesClass0, highestInfoGainFeature + 1, '0');
             
             int nExamplesClass1 = calculateNumberOfRowsWithClass(subExamples, highestInfoGainFeature + 1, '1')[2];
-            char[][] subExamplesClass1 = getSubExamples(subExamples, nExamplesClass1, highestInfoGainFeature, '1');
+            char[][] subExamplesClass1 = getSubExamples(subExamples, nExamplesClass1, highestInfoGainFeature + 1, '1');
             
+            System.out.println("----------------- New left TreeNode -----------------");
+            System.out.println("----------> Feature " + this.features[subFeatures[highestInfoGainFeature]] + " and class 1 <----------");
             //  left child and create a tree for the subset with f1 = yes, return
-            currentTreeNode.setLeftChild(buildID3Tree(subExamplesClass0, subFeatures));
+            currentTreeNode.setLeftChild(buildID3Tree(subExamplesClass1, newSubFeatures));
             
+            System.out.println("----------------- New right TreeNode -----------------");
+            System.out.println("----------> Feature " + this.features[subFeatures[highestInfoGainFeature]] + " and class 0 <----------");
             // right child and create a tree for the subset with f1 = no, return
-            currentTreeNode.setRightChild(buildID3Tree(subExamplesClass1, subFeatures));
-            
+            currentTreeNode.setRightChild(buildID3Tree(subExamplesClass0, newSubFeatures));
         }
         return currentTreeNode;
+    }
+
+    public static void main(String[] args) {
+        ID3 id3 = new ID3();
+        String filename1 = "test.txt";
+        String filename2 = "t_feat.txt";
+        id3.prepareData(filename2, filename1);
+        //id3.printExamples(id3.examples);
+        id3.initializeTable();
+        //id3.printFeatures(id3.usedFeatures);
+        id3.startID3();
+        id3.traverse(id3.root);
     }
 }
