@@ -27,9 +27,11 @@ public class ID3 {
     private char[][] examples;
     private int[] usedFeatures;
     private TreeNode root;
+    private double pruningParameter;
 
-    public ID3() {
+    public ID3(double pruningParameter) {
         this.readFile = new ReadFile();
+        this.pruningParameter = pruningParameter;
     }
 
     public void prepareData(String featureFileName, String dataFileName) {
@@ -48,7 +50,7 @@ public class ID3 {
         double subEntropy;
         
         for (int i = 0; i < 2; i++) {
-            prob = numberOfRows[i] / (double)numberOfRows[2];
+            prob = numberOfRows[i] / (double) numberOfRows[2];
             subEntropy = -prob * log2(prob);
             if (! Double.isNaN(subEntropy)) {
                 entropy += subEntropy;
@@ -97,7 +99,7 @@ public class ID3 {
         double informationGain = entropy;
 
         for (int i = 0; i < 2; i++) {
-            prob = dataset[i] / (double)dataset[2];
+            prob = dataset[i] / (double) dataset[2];
             informationGain += -prob * entropyFeature[i];
         }
         System.out.println("IG for feature " + feature + " is: " + informationGain);
@@ -200,6 +202,16 @@ public class ID3 {
         return '1';
     }
 
+    public Boolean pruneTree(int[] dataset) {
+        double rate = dataset[0] / (double) dataset[2];
+
+        System.out.println("Rate is " + rate);
+        if (rate >= this.pruningParameter || rate <= (1 - this.pruningParameter)) {
+            return true;
+        }
+        return false;
+    }
+
     public void traverse(TreeNode treeNode) {
         if (treeNode.isLeafNode()) {
             System.out.println("Decision: " + treeNode.getLeafNodeClass());
@@ -217,7 +229,7 @@ public class ID3 {
         }
     }
 
-    public void startID3() {
+    public void trainID3() {
         // choose max infogain
         this.root = buildID3Tree(this.examples, this.usedFeatures);
     }
@@ -235,6 +247,12 @@ public class ID3 {
             // leaf node with final result 1
             currentTreeNode.setAsLeafNode('1');
             System.out.println("Setting leaf node with decision: 1");
+        }
+        else if (pruneTree(dataset)) {
+            // prune tree
+            char decision = mostCommonClass(dataset);
+            currentTreeNode.setAsLeafNode(decision);
+            System.out.println("Pruning tree and setting leaf node with decision: " + decision);
         }
         else if (subFeatures.length == 0) {
             // leaf result with most common class
@@ -277,15 +295,119 @@ public class ID3 {
         return currentTreeNode;
     }
 
+    public TreeNode getTrainedID3() {
+        return this.root;
+    }
+
+    public char[] getPredictions(char[][] examples) {
+        TreeNode currentTreeNode;
+        int feature;
+        char cls;
+        char decision;
+        char[] predictions = new char[examples.length];
+
+        for (int example = 0; example < examples.length; example++) {
+            currentTreeNode = getTrainedID3();
+            while (! currentTreeNode.isLeafNode()) {
+                feature = currentTreeNode.getFeature();
+                cls = examples[example][feature + 1];
+
+                if (cls == '1') {
+                    currentTreeNode = currentTreeNode.getLeftChild();
+                }
+                else {
+                    currentTreeNode = currentTreeNode.getRightChild();
+                }
+            }
+            decision = currentTreeNode.getLeafNodeClass();
+            predictions[example] = decision;
+        }
+        return predictions;
+    }
+
+    public double calculateAccuracy(char[][] examples, char[] predictions) {
+        int successfulPredictions = 0;
+        double accuracy;
+
+        for (int example = 0; example < examples.length; example++) {
+            if (examples[example][0] == predictions[example]) {
+                successfulPredictions++;
+            }
+        }
+        //System.out.println("Successful predictions are: " + successfulPredictions);
+        accuracy = successfulPredictions / (double) examples.length;
+        return accuracy;
+    }
+
+    public double calculatePrecision(char[][] examples, char[] predictions, char cls) {
+        int truePositives = 0;
+        int falsePositives = 0;
+        double precision;
+
+        for (int example = 0; example < examples.length; example++) {
+            if (predictions[example] == cls) {
+                if (examples[example][0] == predictions[example]) {
+                    truePositives++;
+                }
+                else {
+                    falsePositives++;
+                }
+            }
+        }
+        //System.out.println("True positives are: " + truePositives + " and false positives are: " + falsePositives);
+        precision = truePositives / (double) (truePositives + falsePositives);
+        return precision;
+    }
+
+    public double calculateRecall(char[][] examples, char[] predictions, char cls) {
+        int truePositives = 0;
+        int falseNegatives = 0;
+        double recall;
+
+        for (int example = 0; example < examples.length; example++) {
+            if (predictions[example] == cls) {
+                if (examples[example][0] == predictions[example]) {
+                    truePositives++;
+                }
+            }
+            else {
+                if (examples[example][0] == cls) {
+                    falseNegatives++;
+                }
+            }
+        }
+        recall = truePositives / (double) (truePositives + falseNegatives);
+        return recall;
+    }
+
+    public double calculateF1(double precision, double recall) {
+        double f1 = 2 * (precision * recall) / (precision + recall);
+        return f1;
+    }
+
     public static void main(String[] args) {
-        ID3 id3 = new ID3();
+        double pruningParameter = Double.parseDouble(args[0]);
+
+        // if (pruningParameter < 0.85) {
+        //     pruningParameter = 0.90;
+        // }
+
+        ID3 id3 = new ID3(pruningParameter);
         String filename1 = "test.txt";
         String filename2 = "t_feat.txt";
         id3.prepareData(filename2, filename1);
         //id3.printExamples(id3.examples);
         id3.initializeTable();
         //id3.printFeatures(id3.usedFeatures);
-        id3.startID3();
+        id3.trainID3();
         id3.traverse(id3.root);
+        char[] predictions1 = id3.getPredictions(id3.examples);
+        double accuracy = id3.calculateAccuracy(id3.examples, predictions1);
+        System.out.println("Accuracy score is: " + accuracy);
+        double precision = id3.calculatePrecision(id3.examples, predictions1, '1');
+        System.out.println("Precision score is: " + precision);
+        double recall = id3.calculateRecall(id3.examples, predictions1, '1');
+        System.out.println("Recall score is: " + recall);
+        System.out.println("F1 score is: " + id3.calculateF1(precision, recall));
     }
 }
