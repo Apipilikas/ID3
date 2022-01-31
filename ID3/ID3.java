@@ -231,34 +231,39 @@ public class ID3 {
 
     public void trainID3() {
         // choose max infogain
-        this.root = buildID3Tree(this.examples, this.usedFeatures);
+        this.root = buildID3Tree(this.examples, this.usedFeatures, 'I');
     }
 
-    public TreeNode buildID3Tree(char[][] subExamples, int[] subFeatures) {
+    public TreeNode buildID3Tree(char[][] subExamples, int[] subFeatures, char cls) {
         TreeNode currentTreeNode = new TreeNode();
         printExamples(subExamples);
         int[] dataset = calculateNumberOfRowsWithClass(subExamples, 0, 'T');
-        if (isSameClass(dataset, '0')) {
+        if (subExamples.length == 0) {
+            // leaf node with final cls, depends on the child
+            currentTreeNode.setAsLeafNode(cls);
+            System.out.println("No examples: Setting leaf node with decision: " + cls);
+        }
+        else if (isSameClass(dataset, '0')) {
             // leaf node with final result 0
             currentTreeNode.setAsLeafNode('0');
-            System.out.println("Setting leaf node with decision: 0");
+            System.out.println("Same class: Setting leaf node with decision: 0");
         }
         else if (isSameClass(dataset, '1')) {
             // leaf node with final result 1
             currentTreeNode.setAsLeafNode('1');
-            System.out.println("Setting leaf node with decision: 1");
+            System.out.println("Same class: Setting leaf node with decision: 1");
         }
         else if (pruneTree(dataset)) {
             // prune tree
             char decision = mostCommonClass(dataset);
             currentTreeNode.setAsLeafNode(decision);
-            System.out.println("Pruning tree and setting leaf node with decision: " + decision);
+            System.out.println("Pruning tree: Setting leaf node with decision: " + decision);
         }
         else if (subFeatures.length == 0) {
             // leaf result with most common class
             char decision = mostCommonClass(dataset);
             currentTreeNode.setAsLeafNode(decision);
-            System.out.println("Setting leaf node with decision: " + decision);
+            System.out.println("No features: Setting leaf node with decision: " + decision);
         }
         else {
             int highestInfoGainFeature = 0;
@@ -285,12 +290,12 @@ public class ID3 {
             System.out.println("----------------- New left TreeNode -----------------");
             System.out.println("----------> Feature " + this.features[subFeatures[highestInfoGainFeature]] + " and class 1 <----------");
             //  left child and create a tree for the subset with f1 = yes, return
-            currentTreeNode.setLeftChild(buildID3Tree(subExamplesClass1, newSubFeatures));
+            currentTreeNode.setLeftChild(buildID3Tree(subExamplesClass1, newSubFeatures, '1'));
             
             System.out.println("----------------- New right TreeNode -----------------");
             System.out.println("----------> Feature " + this.features[subFeatures[highestInfoGainFeature]] + " and class 0 <----------");
             // right child and create a tree for the subset with f1 = no, return
-            currentTreeNode.setRightChild(buildID3Tree(subExamplesClass0, newSubFeatures));
+            currentTreeNode.setRightChild(buildID3Tree(subExamplesClass0, newSubFeatures, '0'));
         }
         return currentTreeNode;
     }
