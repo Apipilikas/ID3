@@ -1,11 +1,26 @@
-//package ID3;
+// EVANGELOS PIPILIKAS | 3180157
 
 public class TreeNode {
 
+    /*
+      The TreeNode should look like this:
+      
+                    Node
+      Left Child   /   \   Right Child
+         with     /     \      with
+       class 1   /       \    class 0
+              Node      Node
+             /   \     /    \
+            .     .   .      .
+           .       . .        .
+      
+      Node contains the feature value as an integer.
+    */
+
     private int feature;
-    // YES Choise
+    // Class with value 1
     private TreeNode leftChild;
-    // NO Choice
+    // Class with value 0
     private TreeNode rightChild;
 
     public TreeNode(int feature, TreeNode leftChild, TreeNode rightChild) {

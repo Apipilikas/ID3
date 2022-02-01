@@ -1,4 +1,4 @@
-//package ID3;
+// EVANGELOS PIPILIKAS | 3180157
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -31,8 +31,8 @@ public class ReadFile {
         return fileLines;
     }
 
-    public char[][] extractData(String filename, int numberOfFeatures, int numberOfLines) {
-        char[][] data = initializeTable(numberOfFeatures, numberOfLines);
+    public char[][] extractData(String filename, int numberOfFeatures, int numberOfLines, int n) {
+        char[][] data = initializeTable(numberOfFeatures - n, numberOfLines);
         int lineNumber = 0;
         String line;
         BufferedReader reader = null;
@@ -59,7 +59,9 @@ public class ReadFile {
                 while (tokenizer.hasMoreTokens()) {
                     token = tokenizer.nextToken();
                     feature = Integer.parseInt(token.split(":")[0]);
-                    data[lineNumber][feature + 1] = '1';
+                    if (feature < (numberOfFeatures) && feature >= n) {
+                        data[lineNumber][feature - n + 1] = '1';
+                    }
                 }
                 line = reader.readLine();
                 lineNumber++;
@@ -72,9 +74,10 @@ public class ReadFile {
         return data;
     }
 
-    public String[] extractFeatureData(String filename, int numberOfFeatures) {
-        String[] data = new String[numberOfFeatures];
+    public String[] extractFeatureData(String filename, int numberOfFeatures, int n) {
+        String[] data = new String[numberOfFeatures - n];
         int lineNumber = 0;
+        int lineRead = 0;
         String line;
         BufferedReader reader = null;
 
@@ -83,9 +86,13 @@ public class ReadFile {
             line = reader.readLine();
 
             while (line != null) {
-                data[lineNumber] = line;
+                // skip the first n lines
+                if  (lineRead >= n) {
+                    data[lineNumber] = line;
+                    lineNumber++;
+                }
                 line = reader.readLine();
-                lineNumber++;
+                lineRead++;
             }
             reader.close();
         }
