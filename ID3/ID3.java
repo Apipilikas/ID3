@@ -4,39 +4,38 @@ public class ID3 {
     
     private ReadFile readFile;
     private int numberOfFeatures;
-    private int numberOfExamples;
     private String[] features;
-    private char[][] examples;
     private int[] usedFeatures;
     private TreeNode root;
     private double pruningParameter;
     private int n;
 
-    public ID3(double pruningParameter) {
+    public ID3(double pruningParameter, int nParameter) {
         this.readFile = new ReadFile();
         this.pruningParameter = pruningParameter;
+        this.n = nParameter;
     }
 
-    public void prepareData(String featureFileName, String dataFileName, int n) {
+    public void prepareFeaturesData(String featureFileName) {
         this.numberOfFeatures = readFile.getNumberOfLines(featureFileName);
-        this.numberOfExamples = readFile.getNumberOfLines(dataFileName);
+        //this.numberOfExamples = readFile.getNumberOfLines(dataFileName);
 
-        this.features = readFile.extractFeatureData(featureFileName, this.numberOfFeatures, n);
-        this.examples = readFile.extractData(dataFileName, this.numberOfFeatures, this.numberOfExamples, n);
-        this.n = n;
+        this.features = readFile.extractFeatureData(featureFileName, this.numberOfFeatures, this.n);
+        //this.examples = readFile.extractData(dataFileName, this.numberOfFeatures, this.numberOfExamples, n);
+        //this.n = n;
         
         this.usedFeatures = new int[this.numberOfFeatures - this.n];
         this.initializeTable();
     }
 
-    
+    public char[][] getExamplesData(String dataFileName) {
+        int numberOfExamples = readFile.getNumberOfLines(dataFileName);
+        char[][] examples = readFile.extractData(dataFileName, this.numberOfFeatures, numberOfExamples, this.n);
+        return examples;
+    }
 
     public int getNumberOfFeatures() {
         return this.numberOfFeatures;
-    }
-
-    public int getNumberOfExamples() {
-        return this.numberOfExamples;
     }
 
     public double calculateEntropy(int[] numberOfRows) {
@@ -224,22 +223,19 @@ public class ID3 {
         }
     }
 
-    public char[][] getPercentageOfExamples(double percentage) {
-        int upperLimit = (int) (this.numberOfExamples * percentage);
+    public char[][] getPercentageOfExamples(char[][] examples, double percentage) {
+        int upperLimit = (int) (examples.length * percentage);
         System.out.println(upperLimit);
         char[][] data = new char[upperLimit][this.usedFeatures.length];
 
         for (int example = 0; example < upperLimit; example++) {
-            data[example] = this.examples[example];
+            data[example] = examples[example];
         }
         return data;
     }
 
-    public void trainID3(double percentage) {
+    public void trainID3(char[][] examples) {
         // root tree node
-
-        char[][] examples = getPercentageOfExamples(percentage);
-
         this.root = buildID3Tree(examples, this.usedFeatures, 'I');
     }
 
@@ -412,29 +408,30 @@ public class ID3 {
         //     pruningParameter = 0.90;
         // }
 
-        ID3 id3 = new ID3(pruningParameter);
+        ID3 id3 = new ID3(pruningParameter, nParameter);
         // featureFileName = "t_feat.txt";
         // dataFileName = "test.txt";
         featureFileName = "imdb.vocab";
         trainDataFileName = "labeledBow.feat";
         testDataFileName = "testlabeledBow.feat";
-        id3.prepareData(featureFileName, trainDataFileName, nParameter);
+        id3.prepareFeaturesData(featureFileName);
         //id3.printExamples(id3.examples);
         //id3.printFeatures(id3.usedFeatures);
-        id3.trainID3(0.1);
+        char[][] trainExamples = id3.getExamplesData(trainDataFileName);
+        char[][] trainPerEx = id3.getPercentageOfExamples(trainExamples, 1.0);
+        id3.trainID3(trainPerEx);
         //id3.traverse(id3.getTrainedID3());
-        char[] predictions1 = id3.getPredictions(id3.examples);
-        double accuracy = id3.calculateAccuracy(id3.examples, predictions1);
+        char[] predictions1 = id3.getPredictions(trainPerEx);
+        double accuracy = id3.calculateAccuracy(trainPerEx, predictions1);
         System.out.println("Accuracy score is: " + accuracy);
-        double precision = id3.calculatePrecision(id3.examples, predictions1, '1');
+        double precision = id3.calculatePrecision(trainPerEx, predictions1, '1');
         System.out.println("Precision score is: " + precision);
-        double recall = id3.calculateRecall(id3.examples, predictions1, '1');
+        double recall = id3.calculateRecall(trainPerEx, predictions1, '1');
         System.out.println("Recall score is: " + recall);
         System.out.println("F1 score is: " + id3.calculateF1(precision, recall));
 
-        ReadFile testReadFile = new ReadFile();
-        int numberOfTestExamples = testReadFile.getNumberOfLines(testDataFileName);
-        char[][] testExamples = testReadFile.extractData(testDataFileName, id3.getNumberOfFeatures(), numberOfTestExamples, nParameter);
+        
+        char[][] testExamples = id3.getExamplesData(testDataFileName);
         char[] testpredictions = id3.getPredictions(testExamples);
         double testAccuracy = id3.calculateAccuracy(testExamples, testpredictions);
         System.out.println("Accuracy score is: " + testAccuracy);
