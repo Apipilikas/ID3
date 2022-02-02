@@ -24,3 +24,5 @@ EVANGELOS PIPILIKAS
 ~~~~
 >!< In case there is an OutOfMemoryError, please use less words in the .vocab file. >!<
 ~~~~
+
+Source of data in test_examples folder: https://ai.stanford.edu/~amaas/data/sentiment/
