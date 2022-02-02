@@ -4,9 +4,9 @@
 EVANGELOS PIPILIKAS
 
 ## File compilation
-    1. Open the command line
-    2. Change the directory to the one that contains the project
-    3. Run the command: javac ID3.java
+1. Open the command line
+2. Change the directory to the one that contains the project
+3. Run the command: javac ID3.java
 
 ## Running the algorithm
    ~~~~
