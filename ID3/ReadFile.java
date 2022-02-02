@@ -112,24 +112,4 @@ public class ReadFile {
         }
         return data;
     }
-
-    // public static void main(String[] args){
-    //     ReadFile read = new ReadFile();
-    //     int sum = read.getNumberOfLines("testfeat.txt");
-    //     int sum1 = read.getNumberOfLines("test.txt");
-    //     System.out.println(sum);
-    //     String[] data = read.extractFeatureData("testfeat.txt", sum);
-    //     char[][] data1 = read.extractData("test.txt", sum, sum1);
-    //     for (int i = 0; i < sum; i++) {
-    //         System.out.println(data[i]);
-    //     }
-
-    //     for (int i = 0; i < sum1; i++) {
-    //         for (int j = 0; j < sum + 1; j++) {
-    //             System.out.print(data1[i][j] + " ");
-    //         }
-    //         System.out.println("");
-    //     }
-    //     System.out.println(data1[0].length);
-    // }
 }
